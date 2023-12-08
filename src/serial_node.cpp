@@ -1,5 +1,9 @@
 #include <chrono>
-#include <serial/serial.h> 
+#include <iostream>
+#include <asio.hpp>
+#include <asio/io_service.hpp>
+#include <asio/serial_port.hpp>
+
 #include "std_msgs/msg/string.hpp"
 #include "sensor_msgs/msg/range.hpp"
 
@@ -12,67 +16,59 @@
 
 using namespace std::chrono_literals;
 
-class Ros2SerialNode : public rclcpp::Node
+class SerialCom : public rclcpp::Node
 {
-
 public:
-    Ros2SerialNode()
-    : Node("ros2_serial_node")
+    SerialCom() : Node("serial_com_node")
     {
         this->configure();
         pub_sensor = this->create_publisher<sensor_msgs::msg::Range>(sensor_topic, 1000);
         tf_broadcaster =std::make_unique<tf2_ros::TransformBroadcaster>(*this);
-        try
-        {
-            ser.setPort(port);
-            ser.setBaudrate(baudrate);
-            serial::Timeout to = serial::Timeout::simpleTimeout(100);
-            ser.setTimeout(to);
-            ser.open();
-        }
-        catch (serial::IOException &e)
-        {
-            RCLCPP_INFO(this->get_logger(), "Unable to open port ");
-            return;
-        }
-        if (ser.isOpen())
-        {
-            RCLCPP_INFO(this->get_logger(), "Serial Port initialized");
-        }
-        else
-        {
-            return;
-        }
+
+        auto io_service = std::make_shared<asio::io_service>();
+        auto serial = std::make_shared<asio::serial_port>(*io_service);
+
+        serial->open(port);
+
+        // Set serial port options (baud rate, character size, etc.)
+        serial->set_option(asio::serial_port_base::baud_rate(baudrate));
+        serial->set_option(asio::serial_port_base::character_size(8));
+        serial->set_option(asio::serial_port_base::parity(asio::serial_port_base::parity::none));
+        serial->set_option(asio::serial_port_base::stop_bits(asio::serial_port_base::stop_bits::one));
+        // Buffer for received data
+        std::vector<char> buffer(1024);
+        // Start the first asynchronous read operation
+        //io_context.run();
         // ser.flush();
         timer_ = this->create_wall_timer(
-        timer_ms, std::bind(&Ros2SerialNode::timer_callback, this));
+            timer_ms, std::bind(&SerialCom::timer_callback, this));
     }
 
 private:
     void timer_callback()
     {
-        int count = ser.available();
+        int count = 0; //ser.available();
         if (count != 0)
         {
             //ROS_INFO_ONCE("Data received from serial port.");
             int num;
             rclcpp::Time now = this->get_clock()->now();
-            char read_buf[count];
-            num = ser.read((unsigned char*)read_buf, count);
-            char* ch = strtok(read_buf, ",");
-            if(ch!=NULL && read_buf[0] == '$') {
-              ch = strtok(NULL, ",");
-              int dataNum = atoi(ch);
-              //printf("%s,", ch);
-              int i = 0;
-              int sonarData[dataNum] = {0,};
-              for(i=0; i<dataNum; i++) {
-                ch = strtok(NULL,",");
-                sonarData[i] = atoi(ch);
-                //printf("%d,", sonarData[i]);
-              }
-              //printf(" EOF\r\n");
-            }
+            //char read_buf[count];
+            //num = ser.read((unsigned char*)read_buf, count);
+            // char* ch = strtok(read_buf, ",");
+            // if(ch!=NULL && read_buf[0] == '$') {
+            //   ch = strtok(NULL, ",");
+            //   int dataNum = atoi(ch);
+            //   //printf("%s,", ch);
+            //   int i = 0;
+            //   int sonarData[dataNum] = {0,};
+            //   for(i=0; i<dataNum; i++) {
+            //     ch = strtok(NULL,",");
+            //     sonarData[i] = atoi(ch);
+            //     //printf("%d,", sonarData[i]);
+            //   }
+            //   //printf(" EOF\r\n");
+            // }
 
             //printf("%s\r\n", read_buf);
         }
@@ -103,15 +99,19 @@ private:
         RCLCPP_INFO(this->get_logger(), "\tSENSOR.Topic: %s",     sensor_topic.c_str());
         RCLCPP_INFO(this->get_logger(), "\tTF.Base_link: %s",     base_frame.c_str());
         RCLCPP_INFO(this->get_logger(), "\tTF.Sensor_link: %s",   sensor_frame.c_str());
-
     }
+
     rclcpp::TimerBase::SharedPtr timer_;
     rclcpp::Publisher<sensor_msgs::msg::Range>::SharedPtr       pub_sensor;
     std::string port;
     int baudrate;
     int pub_rate;
     int output_hz;
-    serial::Serial ser;
+    //serial::Serial ser;
+    //asio::io_service io;
+    //asio::io_context io_context;
+    //asio::serial_port serial;
+
     bool is_pub_tf;
     std::chrono::milliseconds timer_ms;
     std::string sensor_frame;
@@ -122,9 +122,9 @@ private:
 
 int main(int argc, char * argv[])
 {
-  printf("hello world ros2_serial package\n");
-  rclcpp::init(argc, argv);
-  rclcpp::spin(std::make_shared<Ros2SerialNode>());
-  rclcpp::shutdown();
-  return 0;
+    std::cout << "Starting serial com node..." << std::endl;
+    rclcpp::init(argc, argv);
+    rclcpp::spin(std::make_shared<SerialCom>());
+    rclcpp::shutdown();
+    return 0;
 }
