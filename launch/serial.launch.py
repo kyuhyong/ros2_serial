@@ -5,14 +5,14 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     config = os.path.join(
-        get_package_share_directory('ros2_serial'),
+        get_package_share_directory('serial_com'),
         'config',
-        'sonar.yaml'
+        'serial.yaml'
         )
     return LaunchDescription([
         Node(
-            package = 'ros2_serial',
-            executable = 'ros2_serial_node',
+            package = 'serial_com',
+            executable = 'serial_com_node',
             output = 'screen',
             parameters = [config]
         )

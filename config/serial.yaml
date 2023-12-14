@@ -1,7 +1,7 @@
 /**:
   ros__parameters:
     port:
-      name: "/dev/ttyUSB0"
+      name: "/dev/ttyACM0"
       baudrate: 115200
     sonar:
       output_hz: 100

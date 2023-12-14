@@ -4,7 +4,7 @@
 
     <!-- <node pkg="tf" type="static_transform_publisher" name="tf_bc" args="0.3 0 0.35 0 0 0 /base_link /camera_link 100" /> -->
 
-    <node pkg="ros2_serial" type="ros2_serial_node" name="serial_node" output="screen">
+    <node pkg="serial_com" type="serial_node" name="serial_node" output="screen">
         <param name="port" value="ttyACM0"/>
         <param name="baudrate" value="115200"/>
         <param name="publish_rate" value="20"/>
