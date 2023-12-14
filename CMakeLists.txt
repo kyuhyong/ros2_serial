@@ -21,6 +21,7 @@ set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 find_package(ament_cmake_ros REQUIRED)
 
 find_package(asio         REQUIRED)
+find_package(Boost         REQUIRED)
 find_package(rclcpp       REQUIRED)
 find_package(std_msgs     REQUIRED)
 find_package(sensor_msgs  REQUIRED)
@@ -32,7 +33,7 @@ find_package(tf2_geometry_msgs REQUIRED)
 find_package(PkgConfig REQUIRED)
 
 #Added
-pkg_check_modules(SERIAL libserial REQUIRED)
+#pkg_check_modules(SERIAL libserial REQUIRED)
 
 
 ###########
@@ -60,7 +61,6 @@ target_include_directories(${PROJECT_NAME}_node PUBLIC
 #Added 
 #target_link_libraries(${PROJECT_NAME} core supervisor serial utm)
 
-
 #############
 ## Install ##
 #############
@@ -69,13 +69,16 @@ install(TARGETS
   ${PROJECT_NAME}_node
   DESTINATION lib/${PROJECT_NAME}
 )
+
 install(DIRECTORY include/
   DESTINATION include
 )
+
 install(
   DIRECTORY launch
   DESTINATION share/${PROJECT_NAME}/launch
 )
+
 install(DIRECTORY config/
   DESTINATION share/${PROJECT_NAME}/config
 )

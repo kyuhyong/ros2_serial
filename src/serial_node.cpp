@@ -3,6 +3,8 @@
 #include <asio.hpp>
 #include <asio/io_service.hpp>
 #include <asio/serial_port.hpp>
+#include <boost/bind.hpp>
+#include <boost/thread.hpp>
 
 #include "std_msgs/msg/string.hpp"
 #include "sensor_msgs/msg/range.hpp"
@@ -13,6 +15,8 @@
 #include "nav_msgs/msg/odometry.hpp"
 
 #include "rclcpp/rclcpp.hpp"
+
+#define SERIAL_PORT_READ_BUF_SIZE 256
 
 using namespace std::chrono_literals;
 
@@ -25,9 +29,9 @@ public:
         pub_sensor = this->create_publisher<sensor_msgs::msg::Range>(sensor_topic, 1000);
         tf_broadcaster =std::make_unique<tf2_ros::TransformBroadcaster>(*this);
 
-        auto io_service = std::make_shared<asio::io_service>();
-        auto serial = std::make_shared<asio::serial_port>(*io_service);
-
+        io_service = std::make_shared<asio::io_service>();
+        serial = std::make_shared<asio::serial_port>(*io_service);
+        end_of_line_char_ = 0x0D;
         serial->open(port);
 
         // Set serial port options (baud rate, character size, etc.)
@@ -35,11 +39,12 @@ public:
         serial->set_option(asio::serial_port_base::character_size(8));
         serial->set_option(asio::serial_port_base::parity(asio::serial_port_base::parity::none));
         serial->set_option(asio::serial_port_base::stop_bits(asio::serial_port_base::stop_bits::one));
-        // Buffer for received data
-        std::vector<char> buffer(1024);
+        
+        boost::thread t(boost::bind(&asio::io_service::run, io_service));
         // Start the first asynchronous read operation
         //io_context.run();
         // ser.flush();
+        std::cout<<"Initialize timer"<<std::endl;
         timer_ = this->create_wall_timer(
             timer_ms, std::bind(&SerialCom::timer_callback, this));
     }
@@ -48,11 +53,13 @@ private:
     void timer_callback()
     {
         int count = 0; //ser.available();
+        int num;
+        rclcpp::Time now = this->get_clock()->now();
+        this->write_some("Hello\r\n");
         if (count != 0)
         {
             //ROS_INFO_ONCE("Data received from serial port.");
-            int num;
-            rclcpp::Time now = this->get_clock()->now();
+            
             //char read_buf[count];
             //num = ser.read((unsigned char*)read_buf, count);
             // char* ch = strtok(read_buf, ",");
@@ -73,6 +80,60 @@ private:
             //printf("%s\r\n", read_buf);
         }
     }
+
+    int write_some(const std::string &buf)
+    {
+        const char *tx_buf = buf.c_str();
+        const int size = buf.size();
+        //boost::system::error_code ec;
+
+        //if (!port_) return -1;
+        if (size == 0) return 0;
+
+        return this->serial->write_some(asio::buffer(tx_buf, size));
+    }
+    void async_read_some_()
+    {
+        if (this->serial == NULL || !this->serial->is_open()) return;
+
+        this->serial->async_read_some( 
+            asio::buffer(read_buf_raw_, SERIAL_PORT_READ_BUF_SIZE),
+            boost::bind(
+                &SerialCom::on_receive_,
+                this, 
+                asio::placeholders::error, 
+                asio::placeholders::bytes_transferred));
+    }
+
+    void on_receive_(const boost::system::error_code& ec, size_t bytes_transferred)
+    {
+        boost::mutex::scoped_lock look(mutex_);
+
+        if (this->serial == NULL || !this->serial->is_open()) return;
+        if (ec) {
+            async_read_some_();
+            return;
+        }
+
+        for (unsigned int i = 0; i < bytes_transferred; ++i) {
+            char c = read_buf_raw_[i];
+            if (c == end_of_line_char_) {
+                this->on_receive_(read_buf_str_);
+                read_buf_str_.clear();
+            }
+            else {
+                read_buf_str_ += c;
+            }
+        }
+        async_read_some_();
+    }
+
+    void on_receive_(const std::string &data)
+    {
+        std::cout << "SerialPort::on_receive_() : " << data << std::endl;
+    }
+
+
     void configure()
     {
         this->declare_parameter<std::string>("port.name",       "/dev/ttyUSB0");
@@ -107,10 +168,13 @@ private:
     int baudrate;
     int pub_rate;
     int output_hz;
-    //serial::Serial ser;
-    //asio::io_service io;
+    std::shared_ptr<asio::io_service> io_service;
     //asio::io_context io_context;
-    //asio::serial_port serial;
+    std::shared_ptr<asio::serial_port> serial;
+    char end_of_line_char_;
+    char read_buf_raw_[SERIAL_PORT_READ_BUF_SIZE];
+	std::string read_buf_str_;
+    boost::mutex mutex_;
 
     bool is_pub_tf;
     std::chrono::milliseconds timer_ms;

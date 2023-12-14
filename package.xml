@@ -15,6 +15,7 @@
   <buildtool_depend>rosidl_default_generators</buildtool_depend>
   
   <depend>asio</depend>
+  <depend>boost</depend>
   <depend>io_context</depend>
   <depend>sensor_msgs</depend>
   <depend>std_msgs</depend>
