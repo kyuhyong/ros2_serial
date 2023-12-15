@@ -1,5 +1,6 @@
 #include <chrono>
 #include <iostream>
+#include <fmt/core.h>
 #include <boost/asio.hpp>
 #include <boost/asio/io_service.hpp>
 #include <boost/asio/serial_port.hpp>
@@ -7,6 +8,7 @@
 #include <boost/system/system_error.hpp>
 #include <boost/bind.hpp>
 #include <boost/thread.hpp>
+//#include "AsyncSerial.hpp"
 
 #include "std_msgs/msg/string.hpp"
 #include "sensor_msgs/msg/range.hpp"
@@ -42,10 +44,15 @@ public:
         serial->set_option(boost::asio::serial_port_base::parity(boost::asio::serial_port_base::parity::none));
         serial->set_option(boost::asio::serial_port_base::stop_bits(boost::asio::serial_port_base::stop_bits::one));
         
-        //boost::thread t(boost::bind(&boost::asio::io_service::run, io_service));
-        //std::thread t([io_service](){io_service.run();});
-        //sync_read_some_();
-        start_receive();
+        // Start a separate thread to run the io_service
+        //io_thread([&io_service]() { io_service->run(); });
+        //io_thread.reset(new boost::thread(boost::bind(&boost::asio::io_service::run, io_service)));
+        this->start_receive();
+        boost::thread t(boost::bind(&boost::asio::io_service::run, io_service));
+
+        start_write("Hello world!\r\n");
+        
+        //this->io_service->run();
         std::cout<<"Initialize timer"<<std::endl;
         timer_ = this->create_wall_timer(
             timer_ms_, std::bind(&SerialCom::timer_callback, this));
@@ -56,7 +63,11 @@ private:
     {
         int count = 0;
         rclcpp::Time now = this->get_clock()->now();
-        //this->write_some("Hello\r\n");
+        std::string msg = fmt::format("Hello {}!\n\r", this->count_);
+        //this->write_some(msg);
+        this->async_write(msg);
+        std::cout<<msg<<std::endl;
+        this->count_++;
         if (count != 0)
         {
             //ROS_INFO_ONCE("Data received from serial port.");
@@ -82,7 +93,7 @@ private:
         }
     }
 
-    int write_some(const std::string &buf)
+    int async_write(const std::string &buf)
     {
         const char *tx_buf = buf.c_str();
         const int size = buf.size();
@@ -93,43 +104,25 @@ private:
 
         return this->serial->write_some(boost::asio::buffer(tx_buf, size));
     }
-    /*
-    void async_read_some_()
+    void start_write(const std::string& message)
     {
-        if (this->serial == NULL || !this->serial->is_open()) return;
-
-        this->serial->async_read_some( 
-            boost::asio::buffer(read_buf_raw_, SERIAL_PORT_READ_BUF_SIZE),
-            boost::bind(
-                static_cast<void(SerialCom::*)(const boost::system::error_code&, size_t)>(&SerialCom::on_receive_),
-                this, 
-                boost::asio::placeholders::error, 
-                boost::asio::placeholders::bytes_transferred));
+        boost::asio::async_write(
+            *serial, boost::asio::buffer(message),
+                boost::bind(&SerialCom::handleWrite, this,
+                    boost::asio::placeholders::error,
+                    boost::asio::placeholders::bytes_transferred));
     }
 
-    void on_receive_(const boost::system::error_code& ec, size_t bytes_transferred)
+    void handleWrite(const boost::system::error_code& error, 
+        std::size_t bytes_transferred) 
     {
-        boost::mutex::scoped_lock look(mutex_);
-
-        if (this->serial == NULL || !this->serial->is_open()) return;
-        if (ec) {
-            async_read_some_();
-            return;
+        if (!error) {
+            std::cout << "Write successful!" << std::endl;
+        } else {
+            std::cerr << "Write error: " << error.message() << std::endl;
         }
-
-        for (unsigned int i = 0; i < bytes_transferred; ++i) {
-            char c = read_buf_raw_[i];
-            if (c == end_of_line_char_) {
-                this->on_receive_(read_buf_str_);
-                read_buf_str_.clear();
-            }
-            else {
-                read_buf_str_ += c;
-            }
-        }
-        async_read_some_();
     }
-    */
+
     void start_receive()
     {
         this->serial->async_read_some(
@@ -138,19 +131,19 @@ private:
                 this, 
                 boost::asio::placeholders::error,
                 boost::asio::placeholders::bytes_transferred));
-        this->io_service->run();
     }
 
     void on_receive_(const boost::system::error_code& error,
         std::size_t bytes_transferred)
     {
         if(!error) {
-            std::cout << "Received: " << rx_buf <<", "<<bytes_transferred<< std::endl;
+            std::cout << "Received: " << rx_buf<< std::endl;
         } else {
             std::cout << "Error receive"<<std::endl;
+            return;
         }
+        start_receive();
     }
-
 
     void configure()
     {
@@ -187,13 +180,14 @@ private:
     int pub_rate_;
     int output_hz_;
     std::shared_ptr<boost::asio::io_service> io_service;
-    //boost::asio::io_context io_context;
     std::shared_ptr<boost::asio::serial_port> serial;
     char end_of_line_char_;
     char read_buf_raw_[SERIAL_PORT_READ_BUF_SIZE];
-	//std::string read_buf_str_;
+	std::string read_buf_str_;
     unsigned char rx_buf[SERIAL_PORT_READ_BUF_SIZE];
+    std::string tx_buffer_;
     boost::mutex mutex_;
+    int count_;
 
     bool is_pub_tf;
     std::chrono::milliseconds timer_ms_;

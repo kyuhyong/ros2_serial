@@ -21,7 +21,8 @@ set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 find_package(ament_cmake_ros REQUIRED)
 
 find_package(asio         REQUIRED)
-find_package(Boost         REQUIRED)
+find_package(Boost         REQUIRED COMPONENTS thread)
+find_package(fmt         REQUIRED)
 find_package(rclcpp       REQUIRED)
 find_package(std_msgs     REQUIRED)
 find_package(sensor_msgs  REQUIRED)
@@ -39,6 +40,9 @@ find_package(PkgConfig REQUIRED)
 ###########
 ## Build ##
 ###########
+
+
+
 
 add_executable(${PROJECT_NAME}_node 
   src/serial_node.cpp
@@ -58,8 +62,14 @@ target_include_directories(${PROJECT_NAME}_node PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
 
+include_directories(include)
+#add_library(AsyncSerial
+#  src/AsyncSerial.cpp
+#)
+
 #Added 
 #target_link_libraries(${PROJECT_NAME} core supervisor serial utm)
+target_link_libraries(${PROJECT_NAME}_node Boost::thread)
 
 #############
 ## Install ##
