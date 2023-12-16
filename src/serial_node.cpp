@@ -47,7 +47,7 @@ public:
         // Start a separate thread to run the io_service
         //io_thread([&io_service]() { io_service->run(); });
         //io_thread.reset(new boost::thread(boost::bind(&boost::asio::io_service::run, io_service)));
-        this->start_receive();
+        this->start_receive_until();
         boost::thread t(boost::bind(&boost::asio::io_service::run, io_service));
 
         start_write("Hello world!\r\n");
@@ -65,8 +65,8 @@ private:
         rclcpp::Time now = this->get_clock()->now();
         std::string msg = fmt::format("Hello {}!\n\r", this->count_);
         //this->write_some(msg);
-        this->async_write(msg);
-        std::cout<<msg<<std::endl;
+        //this->async_write(msg);
+        //std::cout<<msg<<std::endl;
         this->count_++;
         if (count != 0)
         {
@@ -145,6 +145,28 @@ private:
         start_receive();
     }
 
+    void start_receive_until()
+    {
+        boost::asio::async_read_until(*serial, 
+            stream_buf_, "\n",
+            boost::bind(&SerialCom::on_receive_until_,
+                this, 
+                boost::asio::placeholders::error,
+                boost::asio::placeholders::bytes_transferred));
+    }
+
+    void on_receive_until_(const boost::system::error_code& error, std::size_t bytes_transferred)
+    {
+        if (!error && bytes_transferred) 
+        {
+            boost::asio::streambuf::const_buffers_type data = stream_buf_.data();
+            std::string packet(boost::asio::buffers_begin(data), boost::asio::buffers_end(data));
+            std::cout<<"Read Line:"<<packet<<std::endl;
+            stream_buf_.consume(stream_buf_.size());
+            start_receive_until();
+        }
+    }
+
     void configure()
     {
         this->declare_parameter<std::string>("port.name",       "/dev/ttyUSB0");
@@ -182,6 +204,7 @@ private:
     std::shared_ptr<boost::asio::io_service> io_service;
     std::shared_ptr<boost::asio::serial_port> serial;
     char end_of_line_char_;
+    boost::asio::streambuf stream_buf_;
     char read_buf_raw_[SERIAL_PORT_READ_BUF_SIZE];
 	std::string read_buf_str_;
     unsigned char rx_buf[SERIAL_PORT_READ_BUF_SIZE];
