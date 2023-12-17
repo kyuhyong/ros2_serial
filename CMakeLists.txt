@@ -2,9 +2,9 @@ cmake_minimum_required(VERSION 3.5)
 project(serial_com)
 
 # Default to C99
-#if(NOT CMAKE_C_STANDARD)
-#  set(CMAKE_C_STANDARD 99)
-#endif()
+if(NOT CMAKE_C_STANDARD)
+  set(CMAKE_C_STANDARD 99)
+endif()
 
 # Default to C++14
 if(NOT CMAKE_CXX_STANDARD)
@@ -18,9 +18,9 @@ endif()
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
 # find dependencies
-find_package(ament_cmake_ros REQUIRED)
+find_package(ament_cmake REQUIRED)
 
-find_package(asio         REQUIRED)
+#find_package(AsioSerial CONFIG REQUIRED)
 find_package(Boost         REQUIRED COMPONENTS thread)
 find_package(fmt         REQUIRED)
 find_package(rclcpp       REQUIRED)
@@ -33,22 +33,11 @@ find_package(tf2_msgs REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(PkgConfig REQUIRED)
 
-#Added
-#pkg_check_modules(SERIAL libserial REQUIRED)
-
 
 ###########
 ## Build ##
 ###########
-
-
-
-
-add_executable(${PROJECT_NAME}_node 
-  src/serial_node.cpp
-)
-ament_target_dependencies(${PROJECT_NAME}_node
-  asio
+set(THIS_PACKAGE_INCLUDE_DEPENDS
   rclcpp
   sensor_msgs
   std_msgs
@@ -58,18 +47,35 @@ ament_target_dependencies(${PROJECT_NAME}_node
   tf2_msgs
   tf2_geometry_msgs
 )
+
+# Build library
+add_library(AsioSerial SHARED 
+  src/AsioSerial.cpp
+)
+ament_target_dependencies(AsioSerial
+  ${THIS_PACKAGE_INCLUDE_DEPENDS}
+)
+
+include_directories(include)
+
+add_executable(${PROJECT_NAME}_node 
+  src/serial_node.cpp
+)
+ament_target_dependencies(${PROJECT_NAME}_node
+  PUBLIC ${THIS_PACKAGE_INCLUDE_DEPENDS}
+)
+
 target_include_directories(${PROJECT_NAME}_node PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
 
-include_directories(include)
-#add_library(AsyncSerial
-#  src/AsyncSerial.cpp
-#)
-
 #Added 
 #target_link_libraries(${PROJECT_NAME} core supervisor serial utm)
-target_link_libraries(${PROJECT_NAME}_node Boost::thread)
+target_link_libraries(${PROJECT_NAME}_node 
+  PRIVATE
+  Boost::thread
+  AsioSerial
+)
 
 #############
 ## Install ##
