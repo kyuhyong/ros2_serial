@@ -3,6 +3,7 @@
 #include <fmt/core.h>
 
 #include "AsioSerial.hpp"
+#include "AsioSerial.cpp"
 
 #include "std_msgs/msg/string.hpp"
 #include "sensor_msgs/msg/range.hpp"
@@ -13,8 +14,6 @@
 #include "nav_msgs/msg/odometry.hpp"
 
 #include "rclcpp/rclcpp.hpp"
-
-#define SERIAL_PORT_READ_BUF_SIZE 256
 
 using namespace std::chrono_literals;
 
@@ -46,9 +45,6 @@ private:
         int count = 0;
         rclcpp::Time now = this->get_clock()->now();
         std::string msg = fmt::format("Hello {}!\n\r", this->count_);
-        //this->write_some(msg);
-        //serial.start_async_write(msg);
-        //std::cout<<msg<<std::endl;
         serial.write_some(msg);
         this->count_++;
         if (count != 0)

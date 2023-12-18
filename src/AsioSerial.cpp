@@ -125,7 +125,7 @@ void AsioSerial::on_receive_until_(
     {
         boost::asio::streambuf::const_buffers_type data = stream_buf_.data();
         std::string packet(boost::asio::buffers_begin(data), boost::asio::buffers_end(data));
-        std::cout<<"Read Line:"<<packet<<std::endl;
+        //std::cout<<"Read Line:"<<packet<<std::endl;
         stream_buf_.consume(stream_buf_.size());
         if(cb_read_until_) {
             cb_read_until_(packet, bytes_transferred);

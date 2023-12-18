@@ -21,9 +21,7 @@ set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 find_package(ament_cmake REQUIRED)
 
 #find_package(AsioSerial CONFIG REQUIRED)
-#find_package(Boost         REQUIRED COMPONENTS thread)
-find_package(Boost 1.58.0 COMPONENTS system filesystem thread REQUIRED)
-
+find_package(Boost         REQUIRED COMPONENTS thread)
 find_package(fmt         REQUIRED)
 find_package(rclcpp       REQUIRED)
 find_package(std_msgs     REQUIRED)
@@ -34,7 +32,6 @@ find_package(tf2_ros REQUIRED)
 find_package(tf2_msgs REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(PkgConfig REQUIRED)
-find_package(spdlog REQUIRED)
 
 
 ###########
@@ -49,36 +46,44 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
   tf2_ros
   tf2_msgs
   tf2_geometry_msgs
-  spdlog
 )
 
 # Build library
 add_library(AsioSerial SHARED 
   src/AsioSerial.cpp
 )
-
-target_link_libraries(AsioSerial Boost::thread ${BOOST_LIBRARIES})
-ament_target_dependencies(AsioSerial ${THIS_PACKAGE_INCLUDE_DEPENDS})
+ament_target_dependencies(AsioSerial
+  ${THIS_PACKAGE_INCLUDE_DEPENDS}
+)
 
 include_directories(include)
 
-add_executable(${PROJECT_NAME}_node src/serial_node.cpp)
+add_executable(${PROJECT_NAME}_node 
+  src/serial_node.cpp
+)
+ament_target_dependencies(${PROJECT_NAME}_node
+  PUBLIC ${THIS_PACKAGE_INCLUDE_DEPENDS}
+)
 
 target_include_directories(${PROJECT_NAME}_node PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
 
 #Added 
-target_link_libraries(${PROJECT_NAME}_node AsioSerial fmt ${BOOST_LIBRARIES})
+#target_link_libraries(${PROJECT_NAME} core supervisor serial utm)
+target_link_libraries(${PROJECT_NAME}_node 
+  PRIVATE
+  Boost::thread
+  AsioSerial
+)
 
 #############
 ## Install ##
 #############
 
 install(TARGETS 
-  AsioSerial
   ${PROJECT_NAME}_node
-  DESTINATION lib/
+  DESTINATION lib/${PROJECT_NAME}
 )
 
 install(DIRECTORY include/
@@ -94,5 +99,4 @@ install(DIRECTORY config/
   DESTINATION share/${PROJECT_NAME}/config
 )
 
-ament_export_dependencies(rosidl_default_runtime)
 ament_package()

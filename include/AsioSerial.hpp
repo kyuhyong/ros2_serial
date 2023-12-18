@@ -18,14 +18,10 @@
 class AsioSerial
 {
 protected:
-	//boost::asio::io_service io_service_;
-	//serial_port_ptr port_;
     std::shared_ptr<boost::asio::io_service> io_service;
     std::shared_ptr<boost::asio::serial_port> serial;
 	boost::mutex mutex_;
 	
-
-
 	std::string read_buf_str_;
 	char end_of_read_char_;
 	unsigned char rx_buf[SERIAL_PORT_READ_BUF_SIZE];	// For read_some
