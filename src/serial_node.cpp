@@ -3,7 +3,6 @@
 #include <fmt/core.h>
 
 #include "AsioSerial.hpp"
-#include "AsioSerial.cpp"
 
 #include "std_msgs/msg/string.hpp"
 #include "sensor_msgs/msg/range.hpp"
