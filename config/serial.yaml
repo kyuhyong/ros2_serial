@@ -3,10 +3,10 @@
     port:
       name: "/dev/ttyUSB0"
       baudrate: 115200
-    sonar:
-      output_hz: 100
+    topic:
+      output_hz: 10
       topic: "serial_data"
     tf:
       enable: true
       base_frame: "base_link"
-      sensor_frame: "sensor_link"
+      node_frame: "node_link"

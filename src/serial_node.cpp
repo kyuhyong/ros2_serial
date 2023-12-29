@@ -26,8 +26,7 @@ public:
         pub_sensor = this->create_publisher<sensor_msgs::msg::Range>(sensor_topic, 1000);
         tf_broadcaster =std::make_unique<tf2_ros::TransformBroadcaster>(*this);
         
-        serial.set_callback_read_until(
-            boost::bind(&SerialCom::on_serial_rx, this, _1, _2));
+        serial.set_callback_read_until(boost::bind(&SerialCom::on_serial_rx, this, _1, _2));
         if(!serial.open(port_name_, baudrate_)) {
             RCLCPP_INFO(this->get_logger(), "Error: cannot open port %s", port_name_.c_str());
             return;
@@ -83,32 +82,32 @@ private:
     {
         this->declare_parameter<std::string>("port.name",       "/dev/ttyUSB0");
         this->declare_parameter<int>        ("port.baudrate",   115200);
-        this->declare_parameter<std::string>("sensor.topic",    "sensor_data");
-        this->declare_parameter<int>        ("sensor.output_hz", 20);
+        this->declare_parameter<std::string>("topic.topic",    "sensor_data");
+        this->declare_parameter<int>        ("topic.output_hz", 20);
         this->declare_parameter<bool>       ("tf.enable",       false);
         this->declare_parameter<std::string>("tf.base_frame",   "base_link");
-        this->declare_parameter<std::string>("tf.sensor_frame", "sensor_link");
+        this->declare_parameter<std::string>("tf.node_frame",   "node_link");
 
         this->get_parameter<std::string>    ("port.name",       port_name_);
         this->get_parameter<int>            ("port.baudrate",   baudrate_);
-        this->get_parameter<int>            ("sensor.output_hz", output_hz_);
-        this->get_parameter<std::string>    ("sensor.topic",     sensor_topic);
+        this->get_parameter<int>            ("topic.output_hz", output_hz_);
+        this->get_parameter<std::string>    ("topic.topic",     sensor_topic);
         this->get_parameter<bool>           ("tf.enable",       is_pub_tf);
         this->get_parameter<std::string>    ("tf.base_frame",   base_frame);
-        this->get_parameter<std::string>    ("tf.sensor_frame",  sensor_frame);
+        this->get_parameter<std::string>    ("tf.node_frame",   node_frame);
         RCLCPP_INFO(this->get_logger(), "Params:");
         RCLCPP_INFO(this->get_logger(), "\tport.Name: %s",      port_name_.c_str());
         RCLCPP_INFO(this->get_logger(), "\tport.Baudrate: %d",  baudrate_);
         RCLCPP_INFO(this->get_logger(), "\tSENSOR.Ouput_Hz: %d",   output_hz_);
         timer_ms_ = std::chrono::milliseconds {static_cast<long int>(1000 / output_hz_)};
-        RCLCPP_INFO(this->get_logger(), "\tMilliseconds: %d",     timer_ms_.count());
-        RCLCPP_INFO(this->get_logger(), "\tSENSOR.Topic: %s",     sensor_topic.c_str());
-        RCLCPP_INFO(this->get_logger(), "\tTF.Base_link: %s",     base_frame.c_str());
-        RCLCPP_INFO(this->get_logger(), "\tTF.Sensor_link: %s",   sensor_frame.c_str());
+        RCLCPP_INFO(this->get_logger(), "\tMilliseconds: %d",   timer_ms_.count());
+        RCLCPP_INFO(this->get_logger(), "\tTopic.Topic: %s",    sensor_topic.c_str());
+        RCLCPP_INFO(this->get_logger(), "\tTF.Base_link: %s",   base_frame.c_str());
+        RCLCPP_INFO(this->get_logger(), "\tTF.Node_link: %s",   node_frame.c_str());
     }
 
     rclcpp::TimerBase::SharedPtr timer_;
-    rclcpp::Publisher<sensor_msgs::msg::Range>::SharedPtr       pub_sensor;
+    rclcpp::Publisher<sensor_msgs::msg::Range>::SharedPtr pub_sensor;
     std::string port_name_;
     int baudrate_;
     int pub_rate_;
@@ -117,10 +116,10 @@ private:
     int count_;
     bool is_pub_tf;
     std::chrono::milliseconds timer_ms_;
-    std::string sensor_frame;
+    std::string node_frame;
     std::string base_frame;
     std::string sensor_topic;
-    std::unique_ptr<tf2_ros::TransformBroadcaster>              tf_broadcaster;
+    std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster;
 };
 
 int main(int argc, char * argv[])

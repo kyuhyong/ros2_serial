@@ -15,11 +15,16 @@ char AsioSerial::end_of_read_char() const
 {
     return this->end_of_read_char_;
 }
+/// @brief Set end of read character
+/// @param eoc 
 void AsioSerial::set_end_of_read_char(const char &eoc)
 {
     this->end_of_read_char_ = eoc;
 }
-
+/// @brief Open port with port name and baud rate. parity, stopbits are set to default value
+/// @param port_name 
+/// @param baud_rate 
+/// @return 
 bool AsioSerial::open(std::string port_name, int baud_rate)
 {
     boost::system::error_code ec;
@@ -53,29 +58,41 @@ void AsioSerial::stop()
 	io_service->stop();
 	io_service->reset();
 }
-
+/// @brief Write string to be sent
+/// @param buf 
+/// @return 
 int AsioSerial::write_some(const std::string &buf)
 {
     const char *tx_buf = buf.c_str();
     const int size = buf.size();
-    //boost::system::error_code ec;
-
     if (!serial) return -1;
     if (size == 0) return 0;
 
     return this->serial->write_some(boost::asio::buffer(tx_buf, size));
 }
-
+/// @brief Write bytes to be sent
+/// @param bytes 
+/// @param length number of bytes to be sent
+int AsioSerial::write_bytes(const char *bytes, int length)
+{
+    (void) length;
+    if(!serial) return -1;
+    std::string str = bytes;
+    this->write_some(str);
+    return 0;
+}
+/// @brief Start read serial in asynchronous manner until EOC
 void AsioSerial::start_async_receive()
 {
+    std::string s(1, end_of_read_char_);
     boost::asio::async_read_until(*serial, 
-    stream_buf_, "\n",
+    stream_buf_, s,
     boost::bind(&AsioSerial::on_receive_until_,
         this, 
         boost::asio::placeholders::error,
         boost::asio::placeholders::bytes_transferred));
 }
-
+/// @brief Start read serial in asynchronous manner for any reception
 void AsioSerial::start_receive()
 {
     serial->async_read_some(

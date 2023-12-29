@@ -18,10 +18,11 @@
 class AsioSerial
 {
 protected:
+	//boost::asio::io_service io_service_;
+	//serial_port_ptr port_;
     std::shared_ptr<boost::asio::io_service> io_service;
     std::shared_ptr<boost::asio::serial_port> serial;
 	boost::mutex mutex_;
-	
 	std::string read_buf_str_;
 	char end_of_read_char_;
 	unsigned char rx_buf[SERIAL_PORT_READ_BUF_SIZE];	// For read_some
@@ -43,12 +44,12 @@ public:
 	virtual bool open(std::string port_name, int baud_rate=9600);
 	virtual void stop();
 
-    int write_some(const std::string &buf);
-    void start_async_receive();
-	void start_receive();
-	void start_async_write(const std::string& message);
-
-	void set_callback_read_until(CallbackReadUntil cb) {
+    int 	write_some(const std::string &buf);
+	int 	write_bytes(const char *bytes, int length);
+    void 	start_async_receive();
+	void 	start_receive();
+	void 	start_async_write(const std::string& message);
+	void 	set_callback_read_until(CallbackReadUntil cb) {
 		cb_read_until_ = cb;
 	}
 
